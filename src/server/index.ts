@@ -1,5 +1,5 @@
 // GAS のエントリポイント。ここで export した関数が google.script.run から呼べる (scripts/build-server.mjs 参照)
-import type { AttendanceRecord, MonthlySummary, PunchLog, RecordInput, ServerApi, StatusResponse } from "../shared/types";
+import type { AttendanceRecord, MonthlySummary, PunchLog, RecordInput, ServerApi, StatusResponse, UserSettings } from "../shared/types";
 import { calcWorkMinutes, isLocalDateTime, summarizeByMonth } from "../shared/time";
 import { currentUserEmail, now, today } from "./clock";
 import * as sheet from "./sheet";
@@ -48,7 +48,7 @@ export function getStatus(): StatusResponse {
   const email = currentUserEmail();
   const date = today();
   const located = sheet.findByDate(email, date);
-  return { email, now: now(), today: date, record: located?.record ?? null };
+  return { email, now: now(), today: date, record: located?.record ?? null, settings: sheet.getSettings(email) };
 }
 
 export function clockIn(): AttendanceRecord {
@@ -169,10 +169,23 @@ export function getYearlySummary(year: string): MonthlySummary[] {
   return summarizeByMonth(year, sheet.listByYear(currentUserEmail(), year));
 }
 
+export function saveSettings(settings: UserSettings): UserSettings {
+  const target = Number(settings?.monthlyTargetMinutes);
+  if (!Number.isFinite(target) || target < 0 || target > 24 * 60 * 31) {
+    throw new Error("目標労働時間は 0 以上の分数で入力してください");
+  }
+  return withLock(() => {
+    const email = currentUserEmail();
+    const normalized: UserSettings = { monthlyTargetMinutes: Math.round(target) };
+    sheet.saveSettings(email, normalized, now());
+    return normalized;
+  });
+}
+
 function describe(r: AttendanceRecord): string {
   return `${r.date} ${r.clockIn?.slice(11) ?? "-"}〜${r.clockOut?.slice(11) ?? "-"} 休憩${r.breakMinutes}分${r.note ? ` (${r.note})` : ""}`;
 }
 
 // 型チェック用: index.ts の API が ServerApi と一致することを保証
-const _check: ServerApi = { getStatus, clockIn, clockOut, listRecords, saveRecord, deleteRecord, listLogs, getYearlySummary };
+const _check: ServerApi = { getStatus, clockIn, clockOut, listRecords, saveRecord, deleteRecord, listLogs, getYearlySummary, saveSettings };
 void _check;

@@ -83,3 +83,37 @@ export function summarizeByMonth(
     };
   });
 }
+
+export interface TargetPace {
+  /** 月の日数 */
+  daysInMonth: number;
+  /** 経過日数 (当日を含む)。未来の月は 0、過去の月は月の日数 */
+  elapsedDays: number;
+  /** 今日時点で必要な累積時間(分) = 目標 × 経過日数 ÷ 月の日数 */
+  expectedMinutes: number;
+  /** 実績 - 目安 */
+  diffMinutes: number;
+  /** 目標に対する残り(分)。達成済みなら 0 */
+  remainingMinutes: number;
+}
+
+/** 目標を暦日で按分し、今日時点のペースと比較する */
+export function calcTargetPace(month: string, today: string, actualMinutes: number, targetMinutes: number): TargetPace {
+  const days = daysInMonth(month);
+  const todayMonth = today.slice(0, 7);
+  const elapsed = month < todayMonth ? days : month > todayMonth ? 0 : Number(today.slice(8, 10));
+  const expected = Math.round((targetMinutes * elapsed) / days);
+  return {
+    daysInMonth: days,
+    elapsedDays: elapsed,
+    expectedMinutes: expected,
+    diffMinutes: actualMinutes - expected,
+    remainingMinutes: Math.max(0, targetMinutes - actualMinutes),
+  };
+}
+
+/** 分 → "+1:30" / "-0:45" */
+export function formatSignedMinutes(min: number): string {
+  const sign = min < 0 ? "-" : "+";
+  return `${sign}${formatMinutes(Math.abs(min))}`;
+}

@@ -1,5 +1,6 @@
 // スプレッドシートへの読み書き
-import type { AttendanceRecord, PunchLog } from "../shared/types";
+import type { AttendanceRecord, PunchLog, UserSettings } from "../shared/types";
+import { DEFAULT_SETTINGS } from "../shared/types";
 import { calcWorkMinutes } from "../shared/time";
 import { formatDateTime } from "./clock";
 
@@ -189,4 +190,38 @@ export function listLogsByMonth(email: string, month: string): PunchLog[] {
     }))
     .filter((l) => l.email === email && l.timestamp.startsWith(month))
     .reverse();
+}
+
+// --- Settings --------------------------------------------------------------
+
+const SETTINGS_SHEET = "Settings";
+const SETTINGS_HEADERS = ["email", "monthlyTargetMinutes", "updatedAt"] as const;
+
+function settingsSheet() {
+  return getOrCreateSheet(SETTINGS_SHEET, SETTINGS_HEADERS);
+}
+
+export function getSettings(email: string): UserSettings {
+  const sheet = settingsSheet();
+  const last = sheet.getLastRow();
+  if (last < 2) return { ...DEFAULT_SETTINGS };
+  const values = sheet.getRange(2, 1, last - 1, SETTINGS_HEADERS.length).getValues();
+  const row = values.find((r) => String(r[0]) === email);
+  if (!row) return { ...DEFAULT_SETTINGS };
+  const target = cellToInt(row[1]);
+  return { monthlyTargetMinutes: target == null || target < 0 ? DEFAULT_SETTINGS.monthlyTargetMinutes : target };
+}
+
+export function saveSettings(email: string, settings: UserSettings, updatedAt: string): void {
+  const sheet = settingsSheet();
+  const last = sheet.getLastRow();
+  let rowNumber = last + 1;
+  if (last >= 2) {
+    const emails = sheet.getRange(2, 1, last - 1, 1).getValues();
+    const idx = emails.findIndex((r) => String(r[0]) === email);
+    if (idx >= 0) rowNumber = idx + 2;
+  }
+  const range = sheet.getRange(rowNumber, 1, 1, SETTINGS_HEADERS.length);
+  range.setNumberFormat("@");
+  range.setValues([[email, settings.monthlyTargetMinutes, updatedAt]]);
 }

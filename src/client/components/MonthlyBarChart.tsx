@@ -5,6 +5,8 @@ import { formatMinutes } from "../../shared/time";
 interface Props {
   data: MonthlySummary[];
   onSelectMonth?: (month: string) => void;
+  /** 月の目標(分)。0 以下なら非表示 */
+  targetMinutes?: number;
 }
 
 const W = 720;
@@ -18,13 +20,15 @@ function niceStep(maxHours: number): number {
   return 500;
 }
 
-export function MonthlyBarChart({ data, onSelectMonth }: Props) {
+export function MonthlyBarChart({ data, onSelectMonth, targetMinutes = 0 }: Props) {
   const [hover, setHover] = useState<number | null>(null);
 
   const hours = data.map((d) => d.totalMinutes / 60);
-  const rawMax = Math.max(...hours, 1);
-  const step = niceStep(rawMax);
-  const yMax = Math.ceil(rawMax / step) * step || step;
+  const targetHours = targetMinutes > 0 ? targetMinutes / 60 : 0;
+  const rawMax = Math.max(...hours, targetHours, 1);
+  const headroom = rawMax * 1.12;
+  const step = niceStep(headroom);
+  const yMax = Math.ceil(headroom / step) * step || step;
   const ticks = Array.from({ length: yMax / step + 1 }, (_, i) => i * step);
 
   const plotW = W - PAD.left - PAD.right;
@@ -48,6 +52,16 @@ export function MonthlyBarChart({ data, onSelectMonth }: Props) {
           </g>
         ))}
         <line x1={PAD.left} x2={W - PAD.right} y1={y(0)} y2={y(0)} className="chart-axis" />
+
+        {/* 目標ライン */}
+        {targetHours > 0 && (
+          <g>
+            <line x1={PAD.left} x2={W - PAD.right} y1={y(targetHours)} y2={y(targetHours)} className="chart-target" />
+            <text x={W - PAD.right} y={y(targetHours) - 5} className="chart-target-label" textAnchor="end">
+              目標 {formatMinutes(targetMinutes)}
+            </text>
+          </g>
+        )}
 
         {/* 棒 */}
         {data.map((d, i) => {

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import type { AttendanceRecord, RecordInput, StatusResponse } from "../shared/types";
+import type { AttendanceRecord, RecordInput, StatusResponse, UserSettings } from "../shared/types";
 import { api, isMock } from "./api";
 import { ClockPanel } from "./components/ClockPanel";
 import { EditModal } from "./components/EditModal";
 import { LogList } from "./components/LogList";
 import { MonthlyTable } from "./components/MonthlyTable";
+import { SettingsModal } from "./components/SettingsModal";
 import { SummaryView } from "./components/SummaryView";
 import { Toast, useToast } from "./components/Toast";
 
@@ -19,6 +20,8 @@ export function App() {
   const [editing, setEditing] = useState<{ date: string; record: AttendanceRecord | null } | null>(null);
   const [tab, setTab] = useState<Tab>("records");
   const [year, setYear] = useState<string>(() => localNow().slice(0, 4));
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const targetMinutes = status?.settings.monthlyTargetMinutes ?? 0;
   const { toast, showToast } = useToast();
 
   const refreshStatus = useCallback(async () => {
@@ -67,6 +70,13 @@ export function App() {
     await Promise.all([refreshStatus(), refreshRecords()]);
   }
 
+  async function handleSaveSettings(s: UserSettings) {
+    const saved = await api.saveSettings(s);
+    setStatus((prev) => (prev ? { ...prev, settings: saved } : prev));
+    setSettingsOpen(false);
+    showToast("設定を保存しました", "success");
+  }
+
   async function handleDelete(id: string) {
     await api.deleteRecord(id);
     showToast("削除しました", "success");
@@ -84,6 +94,9 @@ export function App() {
         <div className="header-user">
           {isMock && <span className="badge badge-warn">ローカルモック</span>}
           <span>{status?.email ?? "…"}</span>
+          <button className="btn btn-icon btn-gear" aria-label="設定" title="設定" disabled={!status} onClick={() => setSettingsOpen(true)}>
+            ⚙
+          </button>
         </div>
       </header>
 
@@ -108,6 +121,8 @@ export function App() {
               records={records}
               loading={loadingRecords}
               today={status?.today}
+              targetMinutes={status ? targetMinutes : undefined}
+              onOpenSettings={() => setSettingsOpen(true)}
               onChangeMonth={setMonth}
               onEdit={(date, record) => setEditing({ date, record })}
             />
@@ -117,6 +132,7 @@ export function App() {
             <SummaryView
               year={year}
               onChangeYear={setYear}
+              targetMinutes={targetMinutes}
               onSelectMonth={(m) => {
                 setMonth(m);
                 setTab("records");
@@ -134,6 +150,9 @@ export function App() {
           onSave={handleSave}
           onDelete={handleDelete}
         />
+      )}
+      {settingsOpen && status && (
+        <SettingsModal settings={status.settings} onClose={() => setSettingsOpen(false)} onSave={handleSaveSettings} />
       )}
       <Toast toast={toast} />
     </div>

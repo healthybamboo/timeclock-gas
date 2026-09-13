@@ -29,12 +29,20 @@ export interface RecordInput {
   note: string;
 }
 
+export interface UserSettings {
+  /** 月あたりの目標労働時間(分) */
+  monthlyTargetMinutes: number;
+}
+
+export const DEFAULT_SETTINGS: UserSettings = { monthlyTargetMinutes: 40 * 60 };
+
 export interface StatusResponse {
   email: string;
   /** サーバー時刻 (LocalDateTime) */
   now: LocalDateTime;
   today: LocalDate;
   record: AttendanceRecord | null;
+  settings: UserSettings;
 }
 
 export interface MonthlySummary {
@@ -63,4 +71,5 @@ export interface ServerApi {
   listLogs(month: string): PunchLog[];
   /** year: "YYYY" → 12 か月分 (記録がない月は 0) */
   getYearlySummary(year: string): MonthlySummary[];
+  saveSettings(settings: UserSettings): UserSettings;
 }

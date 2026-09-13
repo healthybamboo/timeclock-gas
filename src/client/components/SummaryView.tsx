@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { MonthlySummary } from "../../shared/types";
-import { formatMinutes } from "../../shared/time";
+import { formatMinutes, formatSignedMinutes } from "../../shared/time";
 import { api } from "../api";
 import { errMsg } from "../App";
 import { MonthlyBarChart } from "./MonthlyBarChart";
@@ -9,9 +9,10 @@ interface Props {
   year: string;
   onChangeYear: (y: string) => void;
   onSelectMonth: (month: string) => void;
+  targetMinutes: number;
 }
 
-export function SummaryView({ year, onChangeYear, onSelectMonth }: Props) {
+export function SummaryView({ year, onChangeYear, onSelectMonth, targetMinutes }: Props) {
   const [data, setData] = useState<MonthlySummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +70,7 @@ export function SummaryView({ year, onChangeYear, onSelectMonth }: Props) {
 
       <h3 className="chart-title">月別労働時間</h3>
       {data ? (
-        <MonthlyBarChart data={data} onSelectMonth={onSelectMonth} />
+        <MonthlyBarChart data={data} onSelectMonth={onSelectMonth} targetMinutes={targetMinutes} />
       ) : (
         <div className="chart-placeholder">読み込み中…</div>
       )}
@@ -83,6 +84,7 @@ export function SummaryView({ year, onChangeYear, onSelectMonth }: Props) {
                 <th>出勤日数</th>
                 <th>労働時間</th>
                 <th>1 日平均</th>
+                {targetMinutes > 0 && <th>目標比</th>}
                 <th></th>
               </tr>
             </thead>
@@ -93,6 +95,11 @@ export function SummaryView({ year, onChangeYear, onSelectMonth }: Props) {
                   <td>{m.workDays}</td>
                   <td className="col-work">{formatMinutes(m.totalMinutes)}</td>
                   <td>{m.workDays ? formatMinutes(Math.round(m.totalMinutes / m.workDays)) : "-"}</td>
+                  {targetMinutes > 0 && (
+                    <td className={m.workDays === 0 ? "" : m.totalMinutes >= targetMinutes ? "diff-good" : "diff-bad"}>
+                      {m.workDays === 0 ? "-" : formatSignedMinutes(m.totalMinutes - targetMinutes)}
+                    </td>
+                  )}
                   <td className="col-action">
                     <button className="btn btn-sm" onClick={() => onSelectMonth(m.month)}>
                       勤務表

@@ -598,3 +598,137 @@ table.records tr.sat .col-date {
 .summary-table {
   max-width: 520px;
 }
+
+/* --- 目標 --- */
+.btn-gear {
+  font-size: 18px;
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+.btn-gear:not(:disabled):hover {
+  background: #f0f2f4;
+  color: var(--text);
+}
+.btn-link {
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-weight: 600;
+  padding: 0 6px;
+  font-size: 13px;
+}
+.btn-link:hover {
+  text-decoration: underline;
+}
+.target {
+  background: #f7f9fb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: grid;
+  gap: 8px;
+}
+.target-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+}
+.target-title {
+  color: var(--muted);
+}
+.target-title strong {
+  color: var(--text);
+  font-size: 16px;
+  margin-left: 4px;
+}
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.verdict-icon {
+  font-size: 12px;
+}
+.verdict-good {
+  background: #e3f5ea;
+  color: #1f7a45;
+}
+.verdict-warn {
+  background: #fff4d6;
+  color: #9a6b00;
+}
+.verdict-bad {
+  background: #fdecec;
+  color: #9b2c2c;
+}
+.verdict-neutral {
+  background: #eef1f4;
+  color: var(--muted);
+}
+.target-bar {
+  position: relative;
+  height: 10px;
+  background: #e1e6eb;
+  border-radius: 999px;
+  overflow: visible;
+}
+.target-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+.target-fill.good {
+  background: var(--in);
+}
+.target-fill.warn {
+  background: #e8a317;
+}
+.target-marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 18px;
+  background: var(--text);
+  transform: translateX(-1px);
+  border-radius: 1px;
+}
+.target-meta {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+.target-meta strong {
+  color: var(--text);
+}
+.muted {
+  color: var(--muted);
+}
+.chart-target {
+  stroke: #8a96a3;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.chart-target-label {
+  font-size: 11px;
+  fill: #5b6772;
+  font-weight: 600;
+}
+.diff-good {
+  color: #1f7a45;
+  font-weight: 600;
+}
+.diff-bad {
+  color: #9b2c2c;
+  font-weight: 600;
+}

@@ -37,6 +37,7 @@ const NAMES: (keyof ServerApi)[] = [
   "deleteRecord",
   "listLogs",
   "getYearlySummary",
+  "saveSettings",
 ];
 
 function createApi(): Api {

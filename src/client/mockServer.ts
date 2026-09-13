@@ -1,5 +1,6 @@
 // ローカル開発 (vite dev) 用のインメモリ + localStorage モック。サーバーと同じ検証ロジックを簡易再現
-import type { AttendanceRecord, PunchLog, RecordInput, ServerApi } from "../shared/types";
+import type { AttendanceRecord, PunchLog, RecordInput, ServerApi, UserSettings } from "../shared/types";
+import { DEFAULT_SETTINGS } from "../shared/types";
 import { calcWorkMinutes, pad2, summarizeByMonth } from "../shared/time";
 
 const KEY = "timeclock-mock";
@@ -8,6 +9,7 @@ const EMAIL = "dev@example.com";
 interface Store {
   records: AttendanceRecord[];
   logs: PunchLog[];
+  settings?: UserSettings;
 }
 
 function load(): Store {
@@ -36,7 +38,13 @@ export function createMockServer(): ServerApi {
       const s = load();
       const ts = now();
       const date = ts.slice(0, 10);
-      return { email: EMAIL, now: ts, today: date, record: s.records.find((r) => r.date === date) ?? null };
+      return {
+        email: EMAIL,
+        now: ts,
+        today: date,
+        record: s.records.find((r) => r.date === date) ?? null,
+        settings: s.settings ?? { ...DEFAULT_SETTINGS },
+      };
     },
     clockIn() {
       const s = load();
@@ -120,6 +128,12 @@ export function createMockServer(): ServerApi {
     },
     getYearlySummary(year) {
       return summarizeByMonth(year, load().records.filter((r) => r.date.startsWith(`${year}-`)));
+    },
+    saveSettings(settings) {
+      const s = load();
+      s.settings = { monthlyTargetMinutes: Math.round(settings.monthlyTargetMinutes) };
+      save(s);
+      return s.settings;
     },
   };
 }

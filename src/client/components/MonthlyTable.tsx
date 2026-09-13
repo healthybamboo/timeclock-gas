@@ -1,19 +1,22 @@
 import type { AttendanceRecord } from "../../shared/types";
 import { dayOfWeek, daysInMonth, formatMinutes, formatTime, pad2 } from "../../shared/time";
 import { MonthNav } from "./MonthNav";
+import { TargetProgress } from "./TargetProgress";
 
 interface Props {
   month: string;
   records: AttendanceRecord[];
   loading: boolean;
   today?: string;
+  targetMinutes?: number;
+  onOpenSettings: () => void;
   onChangeMonth: (m: string) => void;
   onEdit: (date: string, record: AttendanceRecord | null) => void;
 }
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 
-export function MonthlyTable({ month, records, loading, today, onChangeMonth, onEdit }: Props) {
+export function MonthlyTable({ month, records, loading, today, targetMinutes, onOpenSettings, onChangeMonth, onEdit }: Props) {
   const byDate = new Map(records.map((r) => [r.date, r]));
   const days = Array.from({ length: daysInMonth(month) }, (_, i) => `${month}-${pad2(i + 1)}`);
   const totalMinutes = records.reduce((s, r) => s + (r.workMinutes ?? 0), 0);
@@ -32,6 +35,16 @@ export function MonthlyTable({ month, records, loading, today, onChangeMonth, on
           </span>
         </div>
       </div>
+
+      {today && targetMinutes != null && (
+        <TargetProgress
+          month={month}
+          today={today}
+          actualMinutes={totalMinutes}
+          targetMinutes={targetMinutes}
+          onOpenSettings={onOpenSettings}
+        />
+      )}
 
       <div className={loading ? "table-wrap loading" : "table-wrap"}>
         <table className="records">
