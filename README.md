@@ -4,9 +4,10 @@ AKASHI 風のシンプルな勤怠打刻 Web アプリです。データは Goog
 
 ## 機能
 
-- 出勤 / 退勤の打刻 (二重打刻防止、日跨ぎ退勤対応)
+- 出勤 / 退勤の打刻 (未退勤中の二重出勤防止、日跨ぎ退勤対応)
+- 中抜け対応: 退勤後に「再出勤」で同じ日に何回でも勤務セッションを作れる。打刻パネルに当日のセッション一覧を表示
 - 月ごとの勤務表 (出勤・退勤・休憩・労働時間・備考、出勤日数と総労働時間)
-- 勤怠のあとから編集 / 追加 / 削除 (打刻忘れ対応)
+- 勤怠のあとから編集 / 追加 / 削除 (打刻忘れ対応)。日ごとのモーダルでセッション単位に編集し、時間帯の重複はサーバーで拒否
 - 打刻・編集の操作履歴 (監査ログ)
 - 年間集計タブ (月別労働時間の棒グラフ、年間労働時間・出勤日数・平均、月別テーブル)
 - 月の目標労働時間 (既定 40 時間、ヘッダーの ⚙ から変更可)。勤務表に稼働日で按分した「今日時点の目安」との比較と進捗バー、集計に目標ラインと目標比を表示
@@ -17,7 +18,7 @@ AKASHI 風のシンプルな勤怠打刻 Web アプリです。データは Goog
 
 ```
 src/
-  shared/    サーバー・クライアント共通の型と日時ユーティリティ
+  shared/    サーバー・クライアント共通の型、日時ユーティリティ、ドメインロジック (logic.ts)
   server/    GAS 側 (index.ts が公開 API。sheet.ts がスプレッドシート I/O)
   client/    React アプリ (Vite で 1 つの index.html にバンドル)
 scripts/build-server.mjs   esbuild で GAS 用 Code.js を生成
@@ -31,7 +32,7 @@ dist/                      ビルド成果物 (clasp の rootDir)
 
 | シート    | 列                                                                             |
 | --------- | ------------------------------------------------------------------------------ |
-| `Records` | id, date, email, clockIn, clockOut, breakMinutes, note, workMinutes, updatedAt |
+| `Records` | id, date, email, clockIn, clockOut, breakMinutes, note, workMinutes, updatedAt (1 行 = 1 勤務セッション。同じ日に複数行可) |
 | `Logs`    | timestamp, email, type (IN/OUT/EDIT/DELETE), detail                            |
 | `Settings` | email, monthlyTargetMinutes, updatedAt (ユーザーごとの目標労働時間)                |
 | `Holidays` | date, email, note, updatedAt (ユーザーごとの休日)                                   |

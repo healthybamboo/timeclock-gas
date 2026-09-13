@@ -3,14 +3,18 @@ export type LocalDateTime = string;
 /** "YYYY-MM-DD" */
 export type LocalDate = string;
 
-export interface AttendanceRecord {
+/**
+ * 1 回の勤務 (出勤〜退勤)。中抜けは同じ日に複数のセッションを持つことで表現する。
+ * スプレッドシート Records の 1 行に対応。
+ */
+export interface WorkSession {
   id: string;
   /** 勤務日 */
   date: LocalDate;
   email: string;
   clockIn: LocalDateTime | null;
   clockOut: LocalDateTime | null;
-  /** 休憩(分) */
+  /** このセッション内の休憩(分) */
   breakMinutes: number;
   note: string;
   /** 実労働(分)。退勤が未入力なら null */
@@ -18,9 +22,9 @@ export interface AttendanceRecord {
   updatedAt: string;
 }
 
-/** 編集・新規作成の入力 */
-export interface RecordInput {
-  /** 既存レコードの更新時のみ指定 */
+/** セッションの編集・新規作成の入力 */
+export interface SessionInput {
+  /** 既存セッションの更新時のみ指定 */
   id?: string;
   date: LocalDate;
   clockIn: LocalDateTime | null;
@@ -41,7 +45,10 @@ export interface StatusResponse {
   /** サーバー時刻 (LocalDateTime) */
   now: LocalDateTime;
   today: LocalDate;
-  record: AttendanceRecord | null;
+  /** 今日のセッション (出勤時刻順) */
+  todaySessions: WorkSession[];
+  /** 未退勤のセッション (前日からの日跨ぎを含む)。無ければ null */
+  openSession: WorkSession | null;
   settings: UserSettings;
 }
 
@@ -75,12 +82,14 @@ export interface PunchLog {
 /** サーバー関数のシグネチャ。クライアントの型付き呼び出しとモックで共有 */
 export interface ServerApi {
   getStatus(): StatusResponse;
-  clockIn(): AttendanceRecord;
-  clockOut(): AttendanceRecord;
+  /** 新しいセッションを開始する。未退勤のセッションがあればエラー */
+  clockIn(): WorkSession;
+  /** 未退勤のセッションを閉じる */
+  clockOut(): WorkSession;
   /** month: "YYYY-MM" */
-  listRecords(month: string): AttendanceRecord[];
-  saveRecord(input: RecordInput): AttendanceRecord;
-  deleteRecord(id: string): void;
+  listSessions(month: string): WorkSession[];
+  saveSession(input: SessionInput): WorkSession;
+  deleteSession(id: string): void;
   listLogs(month: string): PunchLog[];
   /** year: "YYYY" → 12 か月分 (記録がない月は 0) */
   getYearlySummary(year: string): MonthlySummary[];

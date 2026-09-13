@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import type { AttendanceRecord, Holiday, RecordInput, StatusResponse, UserSettings } from "../shared/types";
+import type { Holiday, SessionInput, StatusResponse, UserSettings, WorkSession } from "../shared/types";
 import { api, isMock } from "./api";
 import { ClockPanel } from "./components/ClockPanel";
-import { EditModal } from "./components/EditModal";
+import { DayModal } from "./components/DayModal";
 import { HolidayModal } from "./components/HolidayModal";
 import { LogList } from "./components/LogList";
 import { MonthlyTable } from "./components/MonthlyTable";
@@ -15,12 +15,12 @@ type Tab = "records" | "logs" | "summary";
 export function App() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [month, setMonth] = useState<string>(() => localNow().slice(0, 7));
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [sessions, setSessions] = useState<WorkSession[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [editingHoliday, setEditingHoliday] = useState<{ date: string; holiday: Holiday | null } | null>(null);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState<{ date: string; record: AttendanceRecord | null } | null>(null);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [editingHoliday, setEditingHoliday] = useState<{ date: string; holiday: Holiday | null } | null>(null);
   const [tab, setTab] = useState<Tab>("records");
   const [year, setYear] = useState<string>(() => localNow().slice(0, 4));
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -38,8 +38,8 @@ export function App() {
   const refreshRecords = useCallback(async () => {
     setLoadingRecords(true);
     try {
-      const [rs, hs] = await Promise.all([api.listRecords(month), api.listHolidays(month)]);
-      setRecords(rs);
+      const [ss, hs] = await Promise.all([api.listSessions(month), api.listHolidays(month)]);
+      setSessions(ss);
       setHolidays(hs);
     } catch (e) {
       showToast(errMsg(e), "error");
@@ -58,8 +58,8 @@ export function App() {
   async function punch(kind: "in" | "out") {
     setBusy(true);
     try {
-      const rec = kind === "in" ? await api.clockIn() : await api.clockOut();
-      showToast(kind === "in" ? `出勤しました (${rec.clockIn?.slice(11)})` : `退勤しました (${rec.clockOut?.slice(11)})`, "success");
+      const s = kind === "in" ? await api.clockIn() : await api.clockOut();
+      showToast(kind === "in" ? `出勤しました (${s.clockIn?.slice(11)})` : `退勤しました (${s.clockOut?.slice(11)})`, "success");
       await Promise.all([refreshStatus(), refreshRecords()]);
     } catch (e) {
       showToast(errMsg(e), "error");
@@ -68,10 +68,15 @@ export function App() {
     }
   }
 
-  async function handleSave(input: RecordInput) {
-    const saved = await api.saveRecord(input);
-    showToast(`${saved.date} を保存しました`, "success");
-    setEditing(null);
+  async function handleSaveSession(input: SessionInput) {
+    const saved = await api.saveSession(input);
+    showToast(`${saved.date} の勤務を保存しました`, "success");
+    await Promise.all([refreshStatus(), refreshRecords()]);
+  }
+
+  async function handleDeleteSession(id: string) {
+    await api.deleteSession(id);
+    showToast("勤務を削除しました", "success");
     await Promise.all([refreshStatus(), refreshRecords()]);
   }
 
@@ -94,13 +99,6 @@ export function App() {
     setStatus((prev) => (prev ? { ...prev, settings: saved } : prev));
     setSettingsOpen(false);
     showToast("設定を保存しました", "success");
-  }
-
-  async function handleDelete(id: string) {
-    await api.deleteRecord(id);
-    showToast("削除しました", "success");
-    setEditing(null);
-    await Promise.all([refreshStatus(), refreshRecords()]);
   }
 
   return (
@@ -137,14 +135,14 @@ export function App() {
           {tab === "records" ? (
             <MonthlyTable
               month={month}
-              records={records}
+              sessions={sessions}
               holidays={holidays}
               loading={loadingRecords}
               today={status?.today}
               targetMinutes={status ? targetMinutes : undefined}
               onOpenSettings={() => setSettingsOpen(true)}
               onChangeMonth={setMonth}
-              onEdit={(date, record) => setEditing({ date, record })}
+              onEditDay={(date) => setEditingDate(date)}
               onEditHoliday={(date, holiday) => setEditingHoliday({ date, holiday })}
             />
           ) : tab === "logs" ? (
@@ -163,13 +161,13 @@ export function App() {
         </section>
       </main>
 
-      {editing && (
-        <EditModal
-          date={editing.date}
-          record={editing.record}
-          onClose={() => setEditing(null)}
-          onSave={handleSave}
-          onDelete={handleDelete}
+      {editingDate && (
+        <DayModal
+          date={editingDate}
+          sessions={sessions.filter((s) => s.date === editingDate)}
+          onClose={() => setEditingDate(null)}
+          onSave={handleSaveSession}
+          onDelete={handleDeleteSession}
         />
       )}
       {editingHoliday && (

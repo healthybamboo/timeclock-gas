@@ -78,7 +78,7 @@ export function summarizeByMonth(
     const rs = records.filter((r) => r.date.startsWith(month));
     return {
       month,
-      workDays: rs.filter((r) => r.clockIn).length,
+      workDays: new Set(rs.filter((r) => r.clockIn).map((r) => r.date)).size,
       totalMinutes: rs.reduce((s, r) => s + (r.workMinutes ?? 0), 0),
     };
   });

@@ -18,9 +18,12 @@ export function ClockPanel({ status, busy, onClockIn, onClockOut }: Props) {
     return () => clearInterval(t);
   }, []);
 
-  const record = status?.record ?? null;
-  const state: "before" | "working" | "done" = !record?.clockIn ? "before" : record.clockOut ? "done" : "working";
+  const sessions = status?.todaySessions ?? [];
+  const open = status?.openSession ?? null;
+  const closedMinutes = sessions.reduce((s, x) => s + (x.workMinutes ?? 0), 0);
+  const state: "before" | "working" | "out" = open ? "working" : sessions.length === 0 ? "before" : "out";
   const p = (n: number) => String(n).padStart(2, "0");
+  const lastSession = sessions[sessions.length - 1] ?? null;
 
   return (
     <section className="card clock-card">
@@ -34,21 +37,36 @@ export function ClockPanel({ status, busy, onClockIn, onClockOut }: Props) {
 
       <div className={`status-pill status-${state}`}>
         {state === "before" && "未出勤"}
-        {state === "working" && `勤務中 ・ ${formatTime(record!.clockIn)} 出勤`}
-        {state === "done" && `退勤済み ・ ${formatMinutes(record!.workMinutes)} 勤務`}
+        {state === "working" &&
+          `勤務中 ・ ${formatTime(open!.clockIn, status?.today)} 出勤${closedMinutes > 0 ? ` ・ 本日 ${formatMinutes(closedMinutes)} 済` : ""}`}
+        {state === "out" && `退勤済み ・ 本日 ${formatMinutes(closedMinutes)} 勤務`}
       </div>
 
       <div className="punch-buttons">
-        <button className="punch punch-in" disabled={busy || !status || state !== "before"} onClick={onClockIn}>
-          <span className="punch-label">出勤</span>
-          <span className="punch-sub">{record?.clockIn ? formatTime(record.clockIn) : "—"}</span>
+        <button className="punch punch-in" disabled={busy || !status || state === "working"} onClick={onClockIn}>
+          <span className="punch-label">{state === "out" ? "再出勤" : "出勤"}</span>
+          <span className="punch-sub">{state === "working" ? formatTime(open!.clockIn, status?.today) : "—"}</span>
         </button>
         <button className="punch punch-out" disabled={busy || !status || state !== "working"} onClick={onClockOut}>
           <span className="punch-label">退勤</span>
-          <span className="punch-sub">{record?.clockOut ? formatTime(record.clockOut, record.date) : "—"}</span>
+          <span className="punch-sub">{state === "out" && lastSession ? formatTime(lastSession.clockOut, status?.today) : "—"}</span>
         </button>
       </div>
-      {state === "done" && <p className="hint">打刻を修正する場合は下の勤務表から編集してください。</p>}
+
+      {sessions.length > 0 && (
+        <ol className="today-sessions" aria-label="本日の勤務">
+          {sessions.map((s, i) => (
+            <li key={s.id}>
+              <span className="session-idx">{i + 1}</span>
+              <span className="session-range">
+                {formatTime(s.clockIn, status?.today)} – {s.clockOut ? formatTime(s.clockOut, status?.today) : <em>勤務中</em>}
+              </span>
+              <span className="session-work">{s.workMinutes != null ? formatMinutes(s.workMinutes) : ""}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {state === "out" && <p className="hint">中抜けから戻ったら「再出勤」を押してください。修正は下の勤務表からできます。</p>}
     </section>
   );
 }

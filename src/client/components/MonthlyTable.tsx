@@ -1,18 +1,20 @@
-import type { AttendanceRecord, Holiday } from "../../shared/types";
+import { Fragment } from "react";
+import type { Holiday, WorkSession } from "../../shared/types";
 import { dayOfWeek, daysInMonth, formatMinutes, formatTime, pad2 } from "../../shared/time";
+import { groupByDate } from "../../shared/logic";
 import { MonthNav } from "./MonthNav";
 import { TargetProgress } from "./TargetProgress";
 
 interface Props {
   month: string;
-  records: AttendanceRecord[];
+  sessions: WorkSession[];
   holidays: Holiday[];
   loading: boolean;
   today?: string;
   targetMinutes?: number;
   onOpenSettings: () => void;
   onChangeMonth: (m: string) => void;
-  onEdit: (date: string, record: AttendanceRecord | null) => void;
+  onEditDay: (date: string) => void;
   onEditHoliday: (date: string, holiday: Holiday | null) => void;
 }
 
@@ -20,21 +22,21 @@ const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 
 export function MonthlyTable({
   month,
-  records,
+  sessions,
   holidays,
   loading,
   today,
   targetMinutes,
   onOpenSettings,
   onChangeMonth,
-  onEdit,
+  onEditDay,
   onEditHoliday,
 }: Props) {
-  const byDate = new Map(records.map((r) => [r.date, r]));
+  const byDate = groupByDate(sessions);
   const holidayByDate = new Map(holidays.map((h) => [h.date, h]));
   const days = Array.from({ length: daysInMonth(month) }, (_, i) => `${month}-${pad2(i + 1)}`);
-  const totalMinutes = records.reduce((s, r) => s + (r.workMinutes ?? 0), 0);
-  const workDays = records.filter((r) => r.clockIn).length;
+  const totalMinutes = sessions.reduce((s, r) => s + (r.workMinutes ?? 0), 0);
+  const workDays = new Set(sessions.filter((r) => r.clockIn).map((r) => r.date)).size;
 
   return (
     <div>
@@ -76,17 +78,18 @@ export function MonthlyTable({
           </thead>
           <tbody>
             {days.map((date) => {
-              const r = byDate.get(date) ?? null;
+              const day = byDate.get(date) ?? null;
               const h = holidayByDate.get(date) ?? null;
               const dow = dayOfWeek(date);
               const cls = [
                 dow === 0 ? "sun" : dow === 6 ? "sat" : "",
                 date === today ? "today" : "",
-                r ? "" : "empty",
+                day ? "" : "empty",
                 h ? "holiday" : "",
               ]
                 .filter(Boolean)
                 .join(" ");
+              const list = day?.sessions ?? [];
               return (
                 <tr key={date} className={cls}>
                   <td className="col-date">
@@ -97,18 +100,32 @@ export function MonthlyTable({
                         休
                       </span>
                     )}
+                    {list.length > 1 && <span className="session-count">{list.length} 回</span>}
                   </td>
-                  <td>{formatTime(r?.clockIn ?? null, date)}</td>
-                  <td>{formatTime(r?.clockOut ?? null, date)}</td>
-                  <td>{r ? formatMinutes(r.breakMinutes) : "-"}</td>
-                  <td className="col-work">{r ? formatMinutes(r.workMinutes) : "-"}</td>
+                  <td className="col-stack">{list.length ? list.map((s) => <div key={s.id}>{formatTime(s.clockIn, date)}</div>) : "-"}</td>
+                  <td className="col-stack">
+                    {list.length
+                      ? list.map((s) => (
+                          <div key={s.id} className={s.clockOut ? "" : "open"}>
+                            {s.clockOut ? formatTime(s.clockOut, date) : "勤務中"}
+                          </div>
+                        ))
+                      : "-"}
+                  </td>
+                  <td className="col-stack">{list.length ? list.map((s) => <div key={s.id}>{formatMinutes(s.breakMinutes)}</div>) : "-"}</td>
+                  <td className="col-work">{day ? formatMinutes(day.workMinutes) : "-"}</td>
                   <td className="col-note">
-                    {r?.note}
-                    {h?.note && <span className="holiday-note">{r?.note ? " / " : ""}休: {h.note}</span>}
+                    {day?.notes.map((n, i) => (
+                      <Fragment key={i}>
+                        {i > 0 && " / "}
+                        {n}
+                      </Fragment>
+                    ))}
+                    {h?.note && <span className="holiday-note">{day?.notes.length ? " / " : ""}休: {h.note}</span>}
                   </td>
                   <td className="col-action">
-                    <button className="btn btn-sm" onClick={() => onEdit(date, r)}>
-                      {r ? "編集" : "追加"}
+                    <button className="btn btn-sm" onClick={() => onEditDay(date)}>
+                      {day ? "編集" : "追加"}
                     </button>
                     <button
                       className={h ? "btn btn-sm btn-holiday active" : "btn btn-sm btn-holiday"}

@@ -1,5 +1,5 @@
 // スプレッドシートへの読み書き
-import type { AttendanceRecord, Holiday, PunchLog, UserSettings } from "../shared/types";
+import type { Holiday, PunchLog, UserSettings, WorkSession } from "../shared/types";
 import { DEFAULT_SETTINGS } from "../shared/types";
 import { calcWorkMinutes } from "../shared/time";
 import { formatDateTime } from "./clock";
@@ -73,7 +73,7 @@ function cellToInt(v: unknown): number | null {
   return Number.isFinite(n) ? Math.round(n) : null;
 }
 
-function rowToRecord(row: unknown[]): AttendanceRecord {
+function rowToRecord(row: unknown[]): WorkSession {
   const clockIn = cellToDateTime(row[3]);
   const clockOut = cellToDateTime(row[4]);
   const breakMinutes = cellToInt(row[5]) ?? 0;
@@ -90,7 +90,7 @@ function rowToRecord(row: unknown[]): AttendanceRecord {
   };
 }
 
-function recordToRow(r: AttendanceRecord): (string | number)[] {
+function recordToRow(r: WorkSession): (string | number)[] {
   return [
     r.id,
     r.date,
@@ -107,7 +107,7 @@ function recordToRow(r: AttendanceRecord): (string | number)[] {
 // --- Records --------------------------------------------------------------
 
 interface Located {
-  record: AttendanceRecord;
+  record: WorkSession;
   /** シート上の行番号 (1 始まり) */
   rowNumber: number;
 }
@@ -129,26 +129,29 @@ export function findById(id: string): Located | null {
   return readAll().find((l) => l.record.id === id) ?? null;
 }
 
-export function findByDate(email: string, date: string): Located | null {
-  return readAll().find((l) => l.record.email === email && l.record.date === date) ?? null;
+/** 指定した日付群のセッション */
+export function listByDates(email: string, dates: readonly string[]): WorkSession[] {
+  const set = new Set(dates);
+  return readAll()
+    .map((l) => l.record)
+    .filter((r) => r.email === email && set.has(r.date));
 }
 
 /** month: "YYYY-MM" */
-export function listByMonth(email: string, month: string): AttendanceRecord[] {
+export function listByMonth(email: string, month: string): WorkSession[] {
   return readAll()
     .map((l) => l.record)
-    .filter((r) => r.email === email && r.date.startsWith(month))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .filter((r) => r.email === email && r.date.startsWith(month));
 }
 
 /** year: "YYYY" */
-export function listByYear(email: string, year: string): AttendanceRecord[] {
+export function listByYear(email: string, year: string): WorkSession[] {
   return readAll()
     .map((l) => l.record)
     .filter((r) => r.email === email && r.date.startsWith(`${year}-`));
 }
 
-export function insertRecord(record: AttendanceRecord): void {
+export function insertRecord(record: WorkSession): void {
   const sheet = recordsSheet();
   const row = sheet.getLastRow() + 1;
   const range = sheet.getRange(row, 1, 1, RECORD_HEADERS.length);
@@ -156,7 +159,7 @@ export function insertRecord(record: AttendanceRecord): void {
   range.setValues([recordToRow(record)]);
 }
 
-export function updateRecord(rowNumber: number, record: AttendanceRecord): void {
+export function updateRecord(rowNumber: number, record: WorkSession): void {
   const range = recordsSheet().getRange(rowNumber, 1, 1, RECORD_HEADERS.length);
   range.setNumberFormat("@");
   range.setValues([recordToRow(record)]);
