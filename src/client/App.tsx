@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import type { AttendanceRecord, RecordInput, StatusResponse, UserSettings } from "../shared/types";
+import type { AttendanceRecord, Holiday, RecordInput, StatusResponse, UserSettings } from "../shared/types";
 import { api, isMock } from "./api";
 import { ClockPanel } from "./components/ClockPanel";
 import { EditModal } from "./components/EditModal";
+import { HolidayModal } from "./components/HolidayModal";
 import { LogList } from "./components/LogList";
 import { MonthlyTable } from "./components/MonthlyTable";
 import { SettingsModal } from "./components/SettingsModal";
@@ -15,6 +16,8 @@ export function App() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [month, setMonth] = useState<string>(() => localNow().slice(0, 7));
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [editingHoliday, setEditingHoliday] = useState<{ date: string; holiday: Holiday | null } | null>(null);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<{ date: string; record: AttendanceRecord | null } | null>(null);
@@ -35,7 +38,9 @@ export function App() {
   const refreshRecords = useCallback(async () => {
     setLoadingRecords(true);
     try {
-      setRecords(await api.listRecords(month));
+      const [rs, hs] = await Promise.all([api.listRecords(month), api.listHolidays(month)]);
+      setRecords(rs);
+      setHolidays(hs);
     } catch (e) {
       showToast(errMsg(e), "error");
     } finally {
@@ -68,6 +73,20 @@ export function App() {
     showToast(`${saved.date} を保存しました`, "success");
     setEditing(null);
     await Promise.all([refreshStatus(), refreshRecords()]);
+  }
+
+  async function handleSaveHoliday(date: string, note: string) {
+    await api.saveHoliday({ date, note });
+    showToast(`${date} を休日にしました`, "success");
+    setEditingHoliday(null);
+    await refreshRecords();
+  }
+
+  async function handleRemoveHoliday(date: string) {
+    await api.deleteHoliday(date);
+    showToast(`${date} の休日を解除しました`, "success");
+    setEditingHoliday(null);
+    await refreshRecords();
   }
 
   async function handleSaveSettings(s: UserSettings) {
@@ -119,12 +138,14 @@ export function App() {
             <MonthlyTable
               month={month}
               records={records}
+              holidays={holidays}
               loading={loadingRecords}
               today={status?.today}
               targetMinutes={status ? targetMinutes : undefined}
               onOpenSettings={() => setSettingsOpen(true)}
               onChangeMonth={setMonth}
               onEdit={(date, record) => setEditing({ date, record })}
+              onEditHoliday={(date, holiday) => setEditingHoliday({ date, holiday })}
             />
           ) : tab === "logs" ? (
             <LogList month={month} onChangeMonth={setMonth} />
@@ -149,6 +170,15 @@ export function App() {
           onClose={() => setEditing(null)}
           onSave={handleSave}
           onDelete={handleDelete}
+        />
+      )}
+      {editingHoliday && (
+        <HolidayModal
+          date={editingHoliday.date}
+          holiday={editingHoliday.holiday}
+          onClose={() => setEditingHoliday(null)}
+          onSave={handleSaveHoliday}
+          onRemove={handleRemoveHoliday}
         />
       )}
       {settingsOpen && status && (

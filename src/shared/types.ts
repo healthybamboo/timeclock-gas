@@ -52,6 +52,19 @@ export interface MonthlySummary {
   totalMinutes: number;
 }
 
+export interface Holiday {
+  /** "YYYY-MM-DD" */
+  date: LocalDate;
+  email: string;
+  note: string;
+  updatedAt: string;
+}
+
+export interface HolidayInput {
+  date: LocalDate;
+  note: string;
+}
+
 export interface PunchLog {
   timestamp: LocalDateTime;
   email: string;
@@ -72,4 +85,8 @@ export interface ServerApi {
   /** year: "YYYY" → 12 か月分 (記録がない月は 0) */
   getYearlySummary(year: string): MonthlySummary[];
   saveSettings(settings: UserSettings): UserSettings;
+  /** month: "YYYY-MM" */
+  listHolidays(month: string): Holiday[];
+  saveHoliday(input: HolidayInput): Holiday;
+  deleteHoliday(date: LocalDate): void;
 }

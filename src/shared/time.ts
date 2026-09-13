@@ -87,28 +87,57 @@ export function summarizeByMonth(
 export interface TargetPace {
   /** 月の日数 */
   daysInMonth: number;
-  /** 経過日数 (当日を含む)。未来の月は 0、過去の月は月の日数 */
-  elapsedDays: number;
-  /** 今日時点で必要な累積時間(分) = 目標 × 経過日数 ÷ 月の日数 */
+  /** 月内の休日数 */
+  holidayCount: number;
+  /** 稼働日数 = 月の日数 − 休日数 */
+  workDays: number;
+  /** 経過した稼働日数 (当日を含む)。未来の月は 0、過去の月は稼働日数 */
+  elapsedWorkDays: number;
+  /** 今日より後に残っている稼働日数 */
+  remainingWorkDays: number;
+  /** 今日時点で必要な累積時間(分) = 目標 × 経過稼働日 ÷ 稼働日 */
   expectedMinutes: number;
   /** 実績 - 目安 */
   diffMinutes: number;
   /** 目標に対する残り(分)。達成済みなら 0 */
   remainingMinutes: number;
+  /** 残り稼働日で目標に届くための 1 日あたり必要時間(分)。残り稼働日 0 なら null */
+  perDayNeededMinutes: number | null;
 }
 
-/** 目標を暦日で按分し、今日時点のペースと比較する */
-export function calcTargetPace(month: string, today: string, actualMinutes: number, targetMinutes: number): TargetPace {
+/** 目標を稼働日 (暦日 − 休日) で按分し、今日時点のペースと比較する */
+export function calcTargetPace(
+  month: string,
+  today: string,
+  actualMinutes: number,
+  targetMinutes: number,
+  holidayDates: readonly string[] = [],
+): TargetPace {
   const days = daysInMonth(month);
+  const holidays = new Set(holidayDates.filter((d) => d.startsWith(month)));
   const todayMonth = today.slice(0, 7);
-  const elapsed = month < todayMonth ? days : month > todayMonth ? 0 : Number(today.slice(8, 10));
-  const expected = Math.round((targetMinutes * elapsed) / days);
+  const elapsedCalendar = month < todayMonth ? days : month > todayMonth ? 0 : Number(today.slice(8, 10));
+
+  let workDays = 0;
+  let elapsedWorkDays = 0;
+  for (let d = 1; d <= days; d++) {
+    if (holidays.has(`${month}-${pad2(d)}`)) continue;
+    workDays++;
+    if (d <= elapsedCalendar) elapsedWorkDays++;
+  }
+  const remainingWorkDays = workDays - elapsedWorkDays;
+  const expected = workDays === 0 ? 0 : Math.round((targetMinutes * elapsedWorkDays) / workDays);
+  const remaining = Math.max(0, targetMinutes - actualMinutes);
   return {
     daysInMonth: days,
-    elapsedDays: elapsed,
+    holidayCount: holidays.size,
+    workDays,
+    elapsedWorkDays,
+    remainingWorkDays,
     expectedMinutes: expected,
     diffMinutes: actualMinutes - expected,
-    remainingMinutes: Math.max(0, targetMinutes - actualMinutes),
+    remainingMinutes: remaining,
+    perDayNeededMinutes: remainingWorkDays > 0 ? Math.ceil(remaining / remainingWorkDays) : null,
   };
 }
 

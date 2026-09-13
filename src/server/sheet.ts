@@ -1,5 +1,5 @@
 // スプレッドシートへの読み書き
-import type { AttendanceRecord, PunchLog, UserSettings } from "../shared/types";
+import type { AttendanceRecord, Holiday, PunchLog, UserSettings } from "../shared/types";
 import { DEFAULT_SETTINGS } from "../shared/types";
 import { calcWorkMinutes } from "../shared/time";
 import { formatDateTime } from "./clock";
@@ -224,4 +224,62 @@ export function saveSettings(email: string, settings: UserSettings, updatedAt: s
   const range = sheet.getRange(rowNumber, 1, 1, SETTINGS_HEADERS.length);
   range.setNumberFormat("@");
   range.setValues([[email, settings.monthlyTargetMinutes, updatedAt]]);
+}
+
+// --- Holidays --------------------------------------------------------------
+
+const HOLIDAYS_SHEET = "Holidays";
+const HOLIDAY_HEADERS = ["date", "email", "note", "updatedAt"] as const;
+
+function holidaysSheet() {
+  return getOrCreateSheet(HOLIDAYS_SHEET, HOLIDAY_HEADERS);
+}
+
+interface LocatedHoliday {
+  holiday: Holiday;
+  rowNumber: number;
+}
+
+function readAllHolidays(): LocatedHoliday[] {
+  const sheet = holidaysSheet();
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  const values = sheet.getRange(2, 1, last - 1, HOLIDAY_HEADERS.length).getValues();
+  const out: LocatedHoliday[] = [];
+  values.forEach((row, i) => {
+    if (row[0] === "" || row[0] == null) return;
+    out.push({
+      holiday: {
+        date: cellToDate(row[0]),
+        email: String(row[1]),
+        note: row[2] == null ? "" : String(row[2]),
+        updatedAt: cellToDateTime(row[3]) ?? "",
+      },
+      rowNumber: i + 2,
+    });
+  });
+  return out;
+}
+
+export function listHolidaysByMonth(email: string, month: string): Holiday[] {
+  return readAllHolidays()
+    .map((l) => l.holiday)
+    .filter((h) => h.email === email && h.date.startsWith(month))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function upsertHoliday(holiday: Holiday): void {
+  const sheet = holidaysSheet();
+  const existing = readAllHolidays().find((l) => l.holiday.email === holiday.email && l.holiday.date === holiday.date);
+  const rowNumber = existing ? existing.rowNumber : sheet.getLastRow() + 1;
+  const range = sheet.getRange(rowNumber, 1, 1, HOLIDAY_HEADERS.length);
+  range.setNumberFormat("@");
+  range.setValues([[holiday.date, holiday.email, holiday.note, holiday.updatedAt]]);
+}
+
+export function deleteHoliday(email: string, date: string): boolean {
+  const existing = readAllHolidays().find((l) => l.holiday.email === email && l.holiday.date === date);
+  if (!existing) return false;
+  holidaysSheet().deleteRow(existing.rowNumber);
+  return true;
 }

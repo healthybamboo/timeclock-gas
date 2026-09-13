@@ -5,10 +5,11 @@ interface Props {
   today: string;
   actualMinutes: number;
   targetMinutes: number;
+  holidayDates: string[];
   onOpenSettings: () => void;
 }
 
-export function TargetProgress({ month, today, actualMinutes, targetMinutes, onOpenSettings }: Props) {
+export function TargetProgress({ month, today, actualMinutes, targetMinutes, holidayDates, onOpenSettings }: Props) {
   if (targetMinutes <= 0) {
     return (
       <div className="target">
@@ -22,12 +23,14 @@ export function TargetProgress({ month, today, actualMinutes, targetMinutes, onO
     );
   }
 
-  const pace = calcTargetPace(month, today, actualMinutes, targetMinutes);
+  const pace = calcTargetPace(month, today, actualMinutes, targetMinutes, holidayDates);
   const ratio = Math.min(1, actualMinutes / targetMinutes);
   const expectedRatio = Math.min(1, pace.expectedMinutes / targetMinutes);
   const achieved = actualMinutes >= targetMinutes;
-  const isFuture = pace.elapsedDays === 0;
-  const isPast = month < today.slice(0, 7);
+  const todayMonth = today.slice(0, 7);
+  const isFuture = month > todayMonth;
+  const isPast = month < todayMonth;
+  const isCurrent = !isFuture && !isPast;
   const onTrack = pace.diffMinutes >= 0;
 
   let verdict: { cls: string; icon: string; text: string };
@@ -53,25 +56,33 @@ export function TargetProgress({ month, today, actualMinutes, targetMinutes, onO
       </div>
       <div className="target-bar" role="progressbar" aria-valuemin={0} aria-valuemax={targetMinutes} aria-valuenow={actualMinutes}>
         <div className={`target-fill ${achieved ? "good" : onTrack || isFuture ? "" : "warn"}`} style={{ width: `${ratio * 100}%` }} />
-        {!isFuture && !isPast && !achieved && (
-          <div className="target-marker" style={{ left: `${expectedRatio * 100}%` }} title="今日時点の目安" />
-        )}
+        {isCurrent && !achieved && <div className="target-marker" style={{ left: `${expectedRatio * 100}%` }} title="今日時点の目安" />}
       </div>
       <div className="target-meta">
         <span>
           実績 <strong>{formatMinutes(actualMinutes)}</strong>
         </span>
-        {!isFuture && !isPast && (
+        {isCurrent && (
           <span>
             今日時点の目安 <strong>{formatMinutes(pace.expectedMinutes)}</strong>
             <span className="muted">
               {" "}
-              ({pace.elapsedDays}/{pace.daysInMonth} 日)
+              (稼働 {pace.elapsedWorkDays}/{pace.workDays} 日)
             </span>
           </span>
         )}
         <span>
           残り <strong>{formatMinutes(pace.remainingMinutes)}</strong>
+          {isCurrent && !achieved && pace.perDayNeededMinutes != null && (
+            <span className="muted">
+              {" "}
+              (残り稼働 {pace.remainingWorkDays} 日 → 1 日 {formatMinutes(pace.perDayNeededMinutes)})
+            </span>
+          )}
+        </span>
+        <span>
+          休日 <strong>{pace.holidayCount}</strong> 日
+          <span className="muted"> (稼働日 {pace.workDays} 日)</span>
         </span>
       </div>
     </div>

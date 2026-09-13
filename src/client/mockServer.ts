@@ -1,5 +1,5 @@
 // ローカル開発 (vite dev) 用のインメモリ + localStorage モック。サーバーと同じ検証ロジックを簡易再現
-import type { AttendanceRecord, PunchLog, RecordInput, ServerApi, UserSettings } from "../shared/types";
+import type { AttendanceRecord, Holiday, PunchLog, RecordInput, ServerApi, UserSettings } from "../shared/types";
 import { DEFAULT_SETTINGS } from "../shared/types";
 import { calcWorkMinutes, pad2, summarizeByMonth } from "../shared/time";
 
@@ -10,6 +10,7 @@ interface Store {
   records: AttendanceRecord[];
   logs: PunchLog[];
   settings?: UserSettings;
+  holidays?: Holiday[];
 }
 
 function load(): Store {
@@ -134,6 +135,21 @@ export function createMockServer(): ServerApi {
       s.settings = { monthlyTargetMinutes: Math.round(settings.monthlyTargetMinutes) };
       save(s);
       return s.settings;
+    },
+    listHolidays(month) {
+      return (load().holidays ?? []).filter((h) => h.date.startsWith(month)).sort((a, b) => a.date.localeCompare(b.date));
+    },
+    saveHoliday(input) {
+      const s = load();
+      const holiday: Holiday = { date: input.date, email: EMAIL, note: input.note ?? "", updatedAt: now() };
+      s.holidays = [...(s.holidays ?? []).filter((h) => h.date !== input.date), holiday];
+      save(s);
+      return holiday;
+    },
+    deleteHoliday(date) {
+      const s = load();
+      s.holidays = (s.holidays ?? []).filter((h) => h.date !== date);
+      save(s);
     },
   };
 }

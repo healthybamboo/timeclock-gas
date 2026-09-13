@@ -1,5 +1,15 @@
 // GAS のエントリポイント。ここで export した関数が google.script.run から呼べる (scripts/build-server.mjs 参照)
-import type { AttendanceRecord, MonthlySummary, PunchLog, RecordInput, ServerApi, StatusResponse, UserSettings } from "../shared/types";
+import type {
+  AttendanceRecord,
+  Holiday,
+  HolidayInput,
+  MonthlySummary,
+  PunchLog,
+  RecordInput,
+  ServerApi,
+  StatusResponse,
+  UserSettings,
+} from "../shared/types";
 import { calcWorkMinutes, isLocalDateTime, summarizeByMonth } from "../shared/time";
 import { currentUserEmail, now, today } from "./clock";
 import * as sheet from "./sheet";
@@ -182,10 +192,45 @@ export function saveSettings(settings: UserSettings): UserSettings {
   });
 }
 
+export function listHolidays(month: string): Holiday[] {
+  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error("月の形式が不正です");
+  return sheet.listHolidaysByMonth(currentUserEmail(), month);
+}
+
+export function saveHoliday(input: HolidayInput): Holiday {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input?.date ?? "")) throw new Error("日付の形式が不正です");
+  return withLock(() => {
+    const email = currentUserEmail();
+    const holiday: Holiday = { date: input.date, email, note: input.note ?? "", updatedAt: now() };
+    sheet.upsertHoliday(holiday);
+    return holiday;
+  });
+}
+
+export function deleteHoliday(date: string): void {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("日付の形式が不正です");
+  withLock(() => {
+    sheet.deleteHoliday(currentUserEmail(), date);
+  });
+}
+
 function describe(r: AttendanceRecord): string {
   return `${r.date} ${r.clockIn?.slice(11) ?? "-"}〜${r.clockOut?.slice(11) ?? "-"} 休憩${r.breakMinutes}分${r.note ? ` (${r.note})` : ""}`;
 }
 
 // 型チェック用: index.ts の API が ServerApi と一致することを保証
-const _check: ServerApi = { getStatus, clockIn, clockOut, listRecords, saveRecord, deleteRecord, listLogs, getYearlySummary, saveSettings };
+const _check: ServerApi = {
+  getStatus,
+  clockIn,
+  clockOut,
+  listRecords,
+  saveRecord,
+  deleteRecord,
+  listLogs,
+  getYearlySummary,
+  saveSettings,
+  listHolidays,
+  saveHoliday,
+  deleteHoliday,
+};
 void _check;

@@ -9,7 +9,8 @@ AKASHI 風のシンプルな勤怠打刻 Web アプリです。データは Goog
 - 勤怠のあとから編集 / 追加 / 削除 (打刻忘れ対応)
 - 打刻・編集の操作履歴 (監査ログ)
 - 年間集計タブ (月別労働時間の棒グラフ、年間労働時間・出勤日数・平均、月別テーブル)
-- 月の目標労働時間 (既定 40 時間、ヘッダーの ⚙ から変更可)。勤務表に暦日按分した「今日時点の目安」との比較と進捗バー、集計に目標ラインと目標比を表示
+- 月の目標労働時間 (既定 40 時間、ヘッダーの ⚙ から変更可)。勤務表に稼働日で按分した「今日時点の目安」との比較と進捗バー、集計に目標ラインと目標比を表示
+- 休日設定 (勤務表の各行の「休」ボタン、メモ付き)。休日は稼働日から外れ、目安の按分は 目標 × 経過稼働日 ÷ 稼働日 (暦日 − 休日) で計算。残り稼働日で必要な 1 日あたりの時間も表示
 - ユーザーは Google アカウントのメールアドレスで識別 (1 つのシートで複数人利用可)
 
 ## 構成
@@ -33,6 +34,7 @@ dist/                      ビルド成果物 (clasp の rootDir)
 | `Records` | id, date, email, clockIn, clockOut, breakMinutes, note, workMinutes, updatedAt |
 | `Logs`    | timestamp, email, type (IN/OUT/EDIT/DELETE), detail                            |
 | `Settings` | email, monthlyTargetMinutes, updatedAt (ユーザーごとの目標労働時間)                |
+| `Holidays` | date, email, note, updatedAt (ユーザーごとの休日)                                   |
 
 初回アクセス時に自動で作成されます。日時は `YYYY-MM-DDTHH:mm` の文字列として保存します (列は書式なしテキスト)。
 
