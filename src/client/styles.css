@@ -501,3 +501,100 @@ table.records tr.sat .col-date {
     justify-content: space-between;
   }
 }
+
+/* --- 集計 --- */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-tile {
+  background: #f7f9fb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.chart-title {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.chart {
+  position: relative;
+  margin-bottom: 20px;
+}
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chart-placeholder {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.chart-axis {
+  stroke: #c5ccd3;
+  stroke-width: 1;
+}
+.chart-tick {
+  font-size: 11px;
+  fill: var(--muted);
+}
+.chart-value {
+  font-size: 11px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.chart-bar-fill {
+  fill: var(--primary);
+  transition: fill 0.1s;
+}
+.chart-bar.hover .chart-bar-fill {
+  fill: #1565c0;
+}
+.chart-bar.hover .chart-value {
+  fill: var(--text);
+  font-weight: 700;
+}
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  background: #1f2933;
+  color: #fff;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.25);
+}
+.chart-tooltip-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.summary-table {
+  max-width: 520px;
+}

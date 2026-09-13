@@ -1,6 +1,6 @@
 // ローカル開発 (vite dev) 用のインメモリ + localStorage モック。サーバーと同じ検証ロジックを簡易再現
 import type { AttendanceRecord, PunchLog, RecordInput, ServerApi } from "../shared/types";
-import { calcWorkMinutes, pad2 } from "../shared/time";
+import { calcWorkMinutes, pad2, summarizeByMonth } from "../shared/time";
 
 const KEY = "timeclock-mock";
 const EMAIL = "dev@example.com";
@@ -117,6 +117,9 @@ export function createMockServer(): ServerApi {
       return load()
         .logs.filter((l) => l.timestamp.startsWith(month))
         .reverse();
+    },
+    getYearlySummary(year) {
+      return summarizeByMonth(year, load().records.filter((r) => r.date.startsWith(`${year}-`)));
     },
   };
 }

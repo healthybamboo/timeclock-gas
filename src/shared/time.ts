@@ -67,3 +67,19 @@ export function addMonths(month: string, delta: number): string {
   const dt = new Date(Date.UTC(y, m - 1 + delta, 1));
   return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}`;
 }
+
+/** 年内のレコードを月ごとに集計して 12 か月分返す */
+export function summarizeByMonth(
+  year: string,
+  records: { date: string; clockIn: string | null; workMinutes: number | null }[],
+): { month: string; workDays: number; totalMinutes: number }[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const month = `${year}-${pad2(i + 1)}`;
+    const rs = records.filter((r) => r.date.startsWith(month));
+    return {
+      month,
+      workDays: rs.filter((r) => r.clockIn).length,
+      totalMinutes: rs.reduce((s, r) => s + (r.workMinutes ?? 0), 0),
+    };
+  });
+}

@@ -37,6 +37,13 @@ export interface StatusResponse {
   record: AttendanceRecord | null;
 }
 
+export interface MonthlySummary {
+  /** "YYYY-MM" */
+  month: string;
+  workDays: number;
+  totalMinutes: number;
+}
+
 export interface PunchLog {
   timestamp: LocalDateTime;
   email: string;
@@ -54,4 +61,6 @@ export interface ServerApi {
   saveRecord(input: RecordInput): AttendanceRecord;
   deleteRecord(id: string): void;
   listLogs(month: string): PunchLog[];
+  /** year: "YYYY" → 12 か月分 (記録がない月は 0) */
+  getYearlySummary(year: string): MonthlySummary[];
 }

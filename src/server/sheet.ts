@@ -140,6 +140,13 @@ export function listByMonth(email: string, month: string): AttendanceRecord[] {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** year: "YYYY" */
+export function listByYear(email: string, year: string): AttendanceRecord[] {
+  return readAll()
+    .map((l) => l.record)
+    .filter((r) => r.email === email && r.date.startsWith(`${year}-`));
+}
+
 export function insertRecord(record: AttendanceRecord): void {
   const sheet = recordsSheet();
   const row = sheet.getLastRow() + 1;

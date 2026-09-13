@@ -5,9 +5,10 @@ import { ClockPanel } from "./components/ClockPanel";
 import { EditModal } from "./components/EditModal";
 import { LogList } from "./components/LogList";
 import { MonthlyTable } from "./components/MonthlyTable";
+import { SummaryView } from "./components/SummaryView";
 import { Toast, useToast } from "./components/Toast";
 
-type Tab = "records" | "logs";
+type Tab = "records" | "logs" | "summary";
 
 export function App() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -17,6 +18,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<{ date: string; record: AttendanceRecord | null } | null>(null);
   const [tab, setTab] = useState<Tab>("records");
+  const [year, setYear] = useState<string>(() => localNow().slice(0, 4));
   const { toast, showToast } = useToast();
 
   const refreshStatus = useCallback(async () => {
@@ -96,6 +98,9 @@ export function App() {
             <button className={tab === "logs" ? "tab active" : "tab"} onClick={() => setTab("logs")}>
               打刻履歴
             </button>
+            <button className={tab === "summary" ? "tab active" : "tab"} onClick={() => setTab("summary")}>
+              集計
+            </button>
           </div>
           {tab === "records" ? (
             <MonthlyTable
@@ -106,8 +111,17 @@ export function App() {
               onChangeMonth={setMonth}
               onEdit={(date, record) => setEditing({ date, record })}
             />
-          ) : (
+          ) : tab === "logs" ? (
             <LogList month={month} onChangeMonth={setMonth} />
+          ) : (
+            <SummaryView
+              year={year}
+              onChangeYear={setYear}
+              onSelectMonth={(m) => {
+                setMonth(m);
+                setTab("records");
+              }}
+            />
           )}
         </section>
       </main>

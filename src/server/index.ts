@@ -1,6 +1,6 @@
 // GAS のエントリポイント。ここで export した関数が google.script.run から呼べる (scripts/build-server.mjs 参照)
-import type { AttendanceRecord, PunchLog, RecordInput, ServerApi, StatusResponse } from "../shared/types";
-import { calcWorkMinutes, isLocalDateTime } from "../shared/time";
+import type { AttendanceRecord, MonthlySummary, PunchLog, RecordInput, ServerApi, StatusResponse } from "../shared/types";
+import { calcWorkMinutes, isLocalDateTime, summarizeByMonth } from "../shared/time";
 import { currentUserEmail, now, today } from "./clock";
 import * as sheet from "./sheet";
 
@@ -164,10 +164,15 @@ export function listLogs(month: string): PunchLog[] {
   return sheet.listLogsByMonth(currentUserEmail(), month);
 }
 
+export function getYearlySummary(year: string): MonthlySummary[] {
+  if (!/^\d{4}$/.test(year)) throw new Error("年の形式が不正です");
+  return summarizeByMonth(year, sheet.listByYear(currentUserEmail(), year));
+}
+
 function describe(r: AttendanceRecord): string {
   return `${r.date} ${r.clockIn?.slice(11) ?? "-"}〜${r.clockOut?.slice(11) ?? "-"} 休憩${r.breakMinutes}分${r.note ? ` (${r.note})` : ""}`;
 }
 
 // 型チェック用: index.ts の API が ServerApi と一致することを保証
-const _check: ServerApi = { getStatus, clockIn, clockOut, listRecords, saveRecord, deleteRecord, listLogs };
+const _check: ServerApi = { getStatus, clockIn, clockOut, listRecords, saveRecord, deleteRecord, listLogs, getYearlySummary };
 void _check;
